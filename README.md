@@ -1,6 +1,7 @@
 # CleanMetaDICOM
 Clean DICOM personal meta information
 
+```
 usage: CleanMeta [-h] --src-path SRC_PATH [--dst-path DST_PATH] [--use-siuid]
 
 optional arguments:
@@ -12,3 +13,4 @@ optional arguments:
                        dir with converted files will be created near to source
                        files
   --use-siuid          Use Study Instance UID to group DICOM files.
+```
