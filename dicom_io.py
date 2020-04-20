@@ -9,7 +9,7 @@ import numpy as np
 import cv2
 
 
-EMPTY_VALUE = '*' * 30
+EMPTY_VALUE = '*' * 20
 
 
 class Data:
@@ -25,7 +25,7 @@ class Data:
 
         try:
             self.dcm = read(dcm_path)
-            self.dcm = self.clean_meta(self.dcm)
+            self.dcm = clean_meta(self.dcm)
         except Exception:
             print('File "{}" is not DICOM or broken'.format(dcm_path))
             self.dcm = None
@@ -45,7 +45,7 @@ class Data:
         if self.dcm is None:
             return False
 
-        dcm.save_as(output_path)
+        self.dcm.save_as(output_path)
         return True
 
 
@@ -72,10 +72,10 @@ def read(path: str, verbose=False):
     slices = []
     if os.path.isfile(path):
         try:
-            return sitk.ReadImage(path)
+            return dicom.read_file(path)
         except:
             try:
-                return dicom.read_file(path)
+                return sitk.ReadImage(path)
             except:
                 if verbose: 
                     print(

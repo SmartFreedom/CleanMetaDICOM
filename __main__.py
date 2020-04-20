@@ -1,7 +1,8 @@
 import argparse
 import os
+import shutil
 from tqdm import tqdm
-import .io as io 
+import dicom_io as io
 
 
 #  get parameters from command line
@@ -23,12 +24,6 @@ parser.add_argument(
     default=False, action='store_true',
     help="""Use Study Instance UID to group DICOM files.""")
 
-parser.add_argument(
-    '--postfix',
-    default=False, action='store_true',
-    help='Add postfix to filenames _{i}, where `i` is slice order in DICOM'
-)
-
 args = parser.parse_args()
 
 src_path_root = args.src_path
@@ -40,42 +35,34 @@ print('Output path: {}'.format(dst_path_root))
 #  main process
 dst_path_root = src_path_root if dst_path_root is None else dst_path_root
 
-if os.path.isdir(dst_path_root):
-    
-    if not os.path.exists(dst_path_root):
-        os.mkdir(dst_path_root)
+if not os.path.exists(dst_path_root):
+    os.mkdir(dst_path_root)
 
-    total_files = 0
+total_files = 0
+for root, dirs, files in os.walk(src_path_root):
+    total_files += len(files)
+
+with tqdm(total=total_files) as pbar:
     for root, dirs, files in os.walk(src_path_root):
-        total_files += len(files)
+        for filename in files:
+            src_path = os.path.join(root, filename)
+            dst_path = root.replace(src_path_root, dst_path_root)
+            if not os.path.exists(dst_path):
+                    os.makedirs(dst_path, exist_ok=True)
 
-    with tqdm(total=total_files) as pbar:
-        for root, dirs, files in os.walk(src_path_root):
-            for f in files:
-                src_path = os.path.join(root, f)
-                # print(src_path)
-                try:
-                    dcm = Data(src_path)
-                    dst_path = root.replace(src_path_root, dst_path_root)
-                    if not os.path.exists(dst_path):
-                        os.makedirs(dst_path, exist_ok=True)
-                    if args.use_siuid:
-                        if dcm.series_uid:
-                            output_filename = dcm.series_uid
-                        if dcm.study_uid and args.use_siuid:
-                            output_filename = dcm.study_uid
-                        else:
-                            output_filename = os.path.splitext(f)[0]
-                    if args.postfix:
-                        output_filename = '_'.join([
-                            output_filename, dcm.instance_number])
-                    dst_path = os.path.join(
-                        dst_path, output_filename + '.png')
-                    dcm.save(dst_path)
-                except Exception:
-                    print('{}\nFile is not DICOM or broken.'
-                          .format(src_path))
+            dcm = io.Data(src_path)
+            if dcm.dcm is None:
+                print('{}\nFile has been copied.'.format(src_path))
+                shutil.copyfile(src_path, os.path.join(dst_path, filename))
+            
+            if args.use_siuid:
+                if dcm.series_uid:
+                    filename = dcm.series_uid
+                if dcm.study_uid and args.use_siuid:
+                    filename = dcm.study_uid
 
-                pbar.update(1)
+            dcm.save(os.path.join(dst_path, filename))
+
+            pbar.update(1)
 
 print('Converting is finished! Have a nice day!')
